@@ -3,19 +3,8 @@ import pandas as pd
 import numpy as np
 import joblib
 
-# Load the model with error handling
-try:
-    with open("rf_model.pkl", "rb") as file:
-        model = joblib.load(file)
-except FileNotFoundError:
-    st.error("Error: The model file 'rf_model.pkl' was not found. Please ensure it is in the correct directory.")
-    st.stop()
-except ModuleNotFoundError as e:
-    st.error(f"Error: Missing required module: {str(e)}. Ensure 'scikit-learn' is installed with the correct version.")
-    st.stop()
-except Exception as e:
-    st.error(f"Error loading the model: {str(e)}")
-    st.stop()
+with open("rf_model.pkl", "rb") as file:
+    model = joblib.load(file)
 
 st.title("Insurance Cost Prediction App")
 st.write("This app predicts the insurance cost based on input details using a Random Forest Regressor.")
@@ -32,25 +21,23 @@ region = st.selectbox("Region", ["southeast", "southwest", "northeast", "northwe
 sex_val = 1 if sex == "male" else 0
 smoker_val = 1 if smoker == "yes" else 0
 
-# Encode region numerically (matching training preprocessing)
-region_map = {
-    "southeast": 0,
-    "southwest": 1,
-    "northeast": 2,
-    "northwest": 3
+# One-hot encode region
+region_vals = {
+    "southeast": [1, 0, 0, 0],
+    "southwest": [0, 1, 0, 0],
+    "northeast": [0, 0, 1, 0],
+    "northwest": [0, 0, 0, 1]
 }
-region_val = region_map[region]
+region_encoded = region_vals[region]
 
 # Combine all features
-input_data = [age, sex_val, bmi, children, smoker_val, region_val]
+input_data = [age, sex_val, bmi, children, smoker_val] + region_encoded
 input_df = pd.DataFrame([input_data], columns=[
-    "age", "sex", "bmi", "children", "smoker", "region"
+    "age", "sex", "bmi", "children", "smoker",
+    "region_southeast", "region_southwest", "region_northeast", "region_northwest"
 ])
 
 # Predict
 if st.button("Predict Insurance Cost"):
-    try:
-        prediction = model.predict(input_df)
-        st.success(f"Predicted Insurance Cost: ${prediction[0]:.2f}")
-    except Exception as e:
-        st.error(f"Error making prediction: {str(e)}")
+    prediction = model.predict(input_df)
+    st.success(f"Predicted Insurance Cost: ${prediction[0]:.2f}")
